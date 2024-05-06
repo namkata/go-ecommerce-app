@@ -5,6 +5,7 @@ import (
 	"go-ecommerce-app/internal/api/rest"
 	"go-ecommerce-app/internal/api/rest/handlers"
 	"go-ecommerce-app/internal/domain"
+	"go-ecommerce-app/internal/helper"
 	"log"
 	"net/http"
 
@@ -28,9 +29,12 @@ func StartServer(config config.AppConfig) {
 	// run migration
 	db.AutoMigrate(&domain.User{})
 
+	auth := helper.SetupAuth(config.AppSecret)
+
 	restHandler := &rest.RestHandler{
-		App: app,
-		DB:  db,
+		App:  app,
+		DB:   db,
+		Auth: auth,
 	}
 	app.Get("/", HealthCheck)
 	setupRoutes(restHandler)
