@@ -6,6 +6,8 @@ import (
 	"go-ecommerce-app/internal/dto"
 	"go-ecommerce-app/internal/helper"
 	"go-ecommerce-app/internal/repository"
+	"log"
+	"time"
 )
 
 type UserService struct {
@@ -59,11 +61,70 @@ func (s UserService) Login(email string, password string) (string, error) {
 
 }
 
+func (s UserService) isVerifyUser(id uint) bool {
+	currentUser, err := s.Repo.FindUserById(id)
+
+	return err == nil && currentUser.Verified
+}
+
 func (s UserService) GetVerificationCode(e domain.User) (int, error) {
-	return 0, nil
+	// if user already verified
+	if s.isVerifyUser(e.ID) {
+		return 0, errors.New("user already verified")
+	}
+
+	// generate verification code
+	code, err := s.Auth.GenerateCode()
+	if err != nil {
+		return code, err
+	}
+	// update user with latest
+	user := domain.User{
+		Expiry: time.Now().Add(30 * time.Minute),
+		Code:   code,
+	}
+
+	_, err = s.Repo.UpdateUser(e.ID, user)
+
+	if err != nil {
+		return 0, errors.New("unable to update verification code")
+	}
+
+	// user, _ = s.Repo.FindUserById(e.ID)
+
+	// return verification code
+	return code, nil
 }
 
 func (s UserService) VerifyCode(id uint, code int) error {
+	// get user and check user already
+	if s.isVerifyUser(id) {
+		log.Println("verify")
+		return errors.New("user already verified")
+	}
+	// get user
+	user, err := s.Repo.FindUserById(id)
+
+	if err != nil {
+		return err
+	}
+	// check code
+	if user.Code != code {
+		return errors.New("verification code does not match")
+	}
+	// check code expired
+	if !time.Now().Before(user.Expiry) {
+		return errors.New("verification code expired")
+	}
+	// update user
+	updateUser := domain.User{
+		Verified: true,
+	}
+	_, err = s.Repo.UpdateUser(id, updateUser)
+	if err != nil {
+		return errors.New("unable to verify user")
+	}
+
 	return nil
 }
 

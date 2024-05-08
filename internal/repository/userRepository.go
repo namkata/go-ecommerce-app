@@ -74,7 +74,7 @@ func (r userRepository) UpdateUser(id uint, u domain.User) (domain.User, error) 
 	err := r.db.Model(&user).Clauses(clause.Returning{}).Where("id=?", id).Updates(u).Error
 
 	if err != nil {
-		log.Println("error on update %v", err)
+		log.Printf("error on update %v", err)
 		return domain.User{}, errors.New("failed to updated")
 	}
 
